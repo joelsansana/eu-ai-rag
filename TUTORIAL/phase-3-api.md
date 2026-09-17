@@ -28,12 +28,14 @@ Create `src/safety_rag/api/schemas.py`:
 ```python
 from pydantic import BaseModel, Field
 
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     k: int = Field(default=5, ge=1, le=20)
-    regulation: str | None = None       # "ai_act" | "nis2" | None
+    regulation: str | None = None  # "ai_act" | "nis2" | None
     article_num: int | None = None
-    part: str | None = None             # "recital" | "article" | "annex"
+    part: str | None = None  # "recital" | "article" | "annex"
+
 
 class SourceChunk(BaseModel):
     score: float
@@ -48,10 +50,12 @@ class SourceChunk(BaseModel):
     text: str
     content_hash: str
 
+
 class AskResponse(BaseModel):
     answer: str
     sources: list[SourceChunk]
     latency_ms: int
+
 
 class SearchRequest(BaseModel):
     question: str
@@ -67,6 +71,7 @@ class SearchRequest(BaseModel):
 # src/safety_rag/api/auth.py
 import os
 from fastapi import Header, HTTPException
+
 
 async def require_token(authorization: str | None = Header(default=None)):
     expected = os.environ.get("API_TOKEN")
@@ -90,41 +95,70 @@ from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 import time, json
 
-from safety_rag.api.schemas import AskRequest, AskResponse, SearchRequest, SourceChunk
+from safety_rag.api.schemas import (
+    AskRequest,
+    AskResponse,
+    SearchRequest,
+    SourceChunk,
+)
 from safety_rag.api.auth import require_token
 from safety_rag.api.ask import ask
 from safety_rag.retrieval.vector_store import search, embed
 
 app = FastAPI(title="eu-ai-rag", version="0.1.0")
 
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
+
 @app.post("/search", dependencies=[Depends(require_token)])
 async def search_endpoint(req: SearchRequest):
     q_emb = embed([req.question])[0]
-    results = search(q_emb, k=req.k, regulation=req.regulation,
-                     article_num=req.article_num, part=req.part)
-    return {"results": [
-        SourceChunk(score=r["score"], **r["payload"]) for r in results
-    ]}
+    results = search(
+        q_emb,
+        k=req.k,
+        regulation=req.regulation,
+        article_num=req.article_num,
+        part=req.part,
+    )
+    return {
+        "results": [
+            SourceChunk(score=r["score"], **r["payload"]) for r in results
+        ]
+    }
+
 
 @app.post("/ask", dependencies=[Depends(require_token)])
 async def ask_endpoint(req: AskRequest):
     async def event_stream():
         t0 = time.monotonic()
-        result = ask(req.question, k=req.k, regulation=req.regulation,
-                     article_num=req.article_num, part=req.part)
+        result = ask(
+            req.question,
+            k=req.k,
+            regulation=req.regulation,
+            article_num=req.article_num,
+            part=req.part,
+        )
         yield {"event": "answer", "data": result["answer"]}
-        yield {"event": "sources", "data": json.dumps(
-            [SourceChunk(score=r["score"], **r["payload"]).model_dump()
-             for r in result["sources"]],
-            default=str
-        )}
-        yield {"event": "done", "data": json.dumps(
-            {"latency_ms": int((time.monotonic() - t0) * 1000)}
-        )}
+        yield {
+            "event": "sources",
+            "data": json.dumps(
+                [
+                    SourceChunk(score=r["score"], **r["payload"]).model_dump()
+                    for r in result["sources"]
+                ],
+                default=str,
+            ),
+        }
+        yield {
+            "event": "done",
+            "data": json.dumps(
+                {"latency_ms": int((time.monotonic() - t0) * 1000)}
+            ),
+        }
+
     return EventSourceResponse(event_stream())
 ```
 
@@ -208,10 +242,13 @@ In `tests/test_api.py`:
 import pytest
 from fastapi.testclient import TestClient
 
+
 @pytest.fixture
 def client():
     from safety_rag.api.main import app
+
     return TestClient(app)
+
 
 def test_health(client):
     r = client.get("/health")

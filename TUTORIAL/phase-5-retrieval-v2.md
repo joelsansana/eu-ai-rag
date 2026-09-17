@@ -40,10 +40,13 @@ from rank_bm25 import BM25Okapi
 import json, re
 from pathlib import Path
 
+
 class BM25Index:
     def __init__(self, chunks: list[dict]):
         self.chunks = chunks
-        tokenized = [self._tokenize(c["header"] + "\n" + c["text"]) for c in chunks]
+        tokenized = [
+            self._tokenize(c["header"] + "\n" + c["text"]) for c in chunks
+        ]
         self.index = BM25Okapi(tokenized)
 
     @staticmethod
@@ -60,6 +63,7 @@ class BM25Index:
 Build the index once at startup (or in `scripts/build_index.py`):
 ```python
 from safety_rag.retrieval.bm25 import BM25Index
+
 chunks = [...]  # load from data/processed/*.jsonl
 bm25 = BM25Index(chunks)
 ```
@@ -88,11 +92,13 @@ from sentence_transformers import CrossEncoder
 
 _MODEL = None
 
+
 def get_model() -> CrossEncoder:
     global _MODEL
     if _MODEL is None:
         _MODEL = CrossEncoder("BAAI/bge-reranker-base")
     return _MODEL
+
 
 def rerank(query: str, chunks: list[dict], top_k: int = 5) -> list[dict]:
     """Returns top_k chunks sorted by cross-encoder score."""
@@ -113,9 +119,16 @@ from safety_rag.retrieval.bm25 import BM25Index
 from safety_rag.retrieval.embedder import embed
 from safety_rag.retrieval.reranker import rerank
 
-def hybrid_search(question: str, bm25: BM25Index, *,
-                  dense_k: int = 20, bm25_k: int = 20, rerank_k: int = 5,
-                  **filters) -> list[dict]:
+
+def hybrid_search(
+    question: str,
+    bm25: BM25Index,
+    *,
+    dense_k: int = 20,
+    bm25_k: int = 20,
+    rerank_k: int = 5,
+    **filters,
+) -> list[dict]:
     # Dense
     q_emb = embed([question])[0]
     dense_results = dense_search(q_emb, k=dense_k, **filters)
@@ -125,8 +138,9 @@ def hybrid_search(question: str, bm25: BM25Index, *,
     # BM25
     bm25_results = bm25.search(question, k=bm25_k)
     bm25_ranking = [bm25.chunks[i]["content_hash"] for i, _ in bm25_results]
-    bm25_lookup = {bm25.chunks[i]["content_hash"]: bm25.chunks[i]
-                   for i, _ in bm25_results}
+    bm25_lookup = {
+        bm25.chunks[i]["content_hash"]: bm25.chunks[i] for i, _ in bm25_results
+    }
 
     # RRF
     fused_ids = rrf([dense_ranking, bm25_ranking])

@@ -34,11 +34,13 @@ Create `src/safety_rag/generation/llm.py`. The OpenAI-compatible client pointed 
 from openai import OpenAI
 import os
 
+
 def get_client() -> OpenAI:
     return OpenAI(
         base_url="https://api.minimax.io/anthropic/v1",
         api_key=os.environ["MINIMAX_API_KEY"],
     )
+
 
 def generate(prompt: str, *, reasoning: bool = False) -> str:
     client = get_client()
@@ -69,11 +71,13 @@ from sentence_transformers import SentenceTransformer
 
 _MODEL = None
 
+
 def get_model() -> SentenceTransformer:
     global _MODEL
     if _MODEL is None:
         _MODEL = SentenceTransformer("BAAI/bge-small-en-v1.5")
     return _MODEL
+
 
 def embed(texts: list[str]) -> list[list[float]]:
     return get_model().encode(texts, normalize_embeddings=True).tolist()
@@ -120,7 +124,9 @@ uv run python scripts/build_index.py
 In the same `vector_store.py`:
 
 ```python
-def search(query_embedding: list[float], *, k: int = 5, **filters) -> list[dict]:
+def search(
+    query_embedding: list[float], *, k: int = 5, **filters
+) -> list[dict]:
     """Returns [{'id': str, 'score': float, 'payload': {...}}, ...] sorted by score desc."""
 ```
 
@@ -169,9 +175,7 @@ def ask(question: str, *, k: int = 5, **filters) -> dict:
     answer = generate(RAG_PROMPT.format(context=context, question=question))
     return {
         "answer": answer,
-        "sources": [
-            {"score": r["score"], **r["payload"]} for r in results
-        ],
+        "sources": [{"score": r["score"], **r["payload"]} for r in results],
     }
 ```
 

@@ -60,8 +60,8 @@ Write `src/safety_rag/ingestion/eur_lex.py`. It should:
     "effective_date": str,
     "lang": "EN",
     "title": str,
-    "text": str,         # the raw text content of the unit
-    "html_path": str,    # pointer to the source file
+    "text": str,  # the raw text content of the unit
+    "html_path": str,  # pointer to the source file
 }
 ```
 
@@ -82,19 +82,19 @@ Write `src/safety_rag/ingestion/chunker.py`. For most cases, one Article = one c
 Chunk shape:
 ```python
 {
-  "chunk_id": str,         # sha256(regulation + article_num + position)[:12]
-  "regulation": str,
-  "part": str,
-  "article_num": int | None,
-  "recital_num": int | None,
-  "annex_id": str | None,
-  "chapter": str | None,
-  "celex": str,
-  "effective_date": str,
-  "header": str,            # "Article 26, Regulation (EU) 2024/1689 (AI Act), effective 2 August 2026, Chapter 4 — Deployer obligations"
-  "text": str,              # the chunk body, prefixed by the header
-  "n_tokens": int,
-  "content_hash": str,      # sha256 of (header + text) for reproducibility
+    "chunk_id": str,  # sha256(regulation + article_num + position)[:12]
+    "regulation": str,
+    "part": str,
+    "article_num": int | None,
+    "recital_num": int | None,
+    "annex_id": str | None,
+    "chapter": str | None,
+    "celex": str,
+    "effective_date": str,
+    "header": str,  # "Article 26, Regulation (EU) 2024/1689 (AI Act), effective 2 August 2026, Chapter 4 — Deployer obligations"
+    "text": str,  # the chunk body, prefixed by the header
+    "n_tokens": int,
+    "content_hash": str,  # sha256 of (header + text) for reproducibility
 }
 ```
 

@@ -71,11 +71,13 @@ Create `src/safety_rag/eval/metrics.py`:
 def hit_at_k(retrieved_ids: list[str], gold_id: str, k: int) -> int:
     return int(gold_id in retrieved_ids[:k])
 
+
 def mrr_at_k(retrieved_ids: list[str], gold_id: str, k: int) -> float:
     for i, rid in enumerate(retrieved_ids[:k]):
         if rid == gold_id:
             return 1.0 / (i + 1)
     return 0.0
+
 
 def recall_at_k(retrieved_ids: list[str], gold_ids: set[str], k: int) -> float:
     if not gold_ids:
@@ -99,6 +101,7 @@ import json, statistics
 from pathlib import Path
 from safety_rag.api.ask import ask
 from safety_rag.eval.metrics import hit_at_k, mrr_at_k, recall_at_k
+
 
 def run_retrieval_eval(golden_path: Path, k: int = 5) -> dict:
     hits, mrrs, recalls = [], [], []
