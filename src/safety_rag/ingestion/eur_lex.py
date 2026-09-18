@@ -27,10 +27,17 @@ def _extract_title(node: Any) -> str:
         ".eli-title, .oj-ti-art, .oj-ti-section, .oj-ti-grseq"
     )
 
-    if title_node is None:
-        return ""
+    if title_node is not None:
+        return " ".join(title_node.text().split())
 
-    return " ".join(title_node.text().split())
+    # Annexes use <p class="oj-doc-ti"> for both the
+    # annex heading ("ANNEX I") and the annex title.
+    annex_titles = node.css(".oj-doc-ti")
+
+    if len(annex_titles) >= 2:
+        return " ".join(annex_titles[1].text().split())
+
+    return ""
 
 
 def _extract_paragraph_text(node: Any) -> str:
