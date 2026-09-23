@@ -1,9 +1,10 @@
 import re
-import os
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from safety_rag.generation.llm import _strip_thinking, generate, get_client
-from unittest.mock import MagicMock, patch
+
 
 @pytest.mark.integration
 def test_generate_pong():
@@ -21,6 +22,7 @@ def test_generate_pong():
 # ---------------------------------------------------------------------------
 # _strip_thinking — pure function, no mocking needed
 # ---------------------------------------------------------------------------
+
 
 class TestStripThinking:
     def test_no_think_tag_passthrough(self):
@@ -49,7 +51,7 @@ class TestStripThinking:
         assert _strip_thinking("<think>only reasoning, no answer</think>") == ""
 
     def test_unclosed_think_tag_not_stripped(self):
-        # No closing tag -> regex shouldn't match, text passes through (stripped)
+        # No closing tag > regex shouldn't match, text passes through (stripped)
         text = "<think>never closes pong"
         assert _strip_thinking(text) == text.strip()
 
@@ -61,6 +63,7 @@ class TestStripThinking:
 # ---------------------------------------------------------------------------
 # get_client
 # ---------------------------------------------------------------------------
+
 
 class TestGetClient:
     def test_uses_env_api_key_and_base_url(self, monkeypatch):
@@ -81,6 +84,7 @@ class TestGetClient:
 # ---------------------------------------------------------------------------
 # generate — mock the OpenAI client so no network call is made
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_client(content: str | None):
     mock_client = MagicMock()
@@ -103,7 +107,9 @@ class TestGenerate:
         monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
         with patch(
             "safety_rag.generation.llm.get_client",
-            return_value=_make_mock_client("<think>let me consider</think>pong"),
+            return_value=_make_mock_client(
+                "<think>let me consider</think>pong"
+            ),
         ):
             assert generate("ping") == "pong"
 
@@ -118,7 +124,9 @@ class TestGenerate:
     def test_calls_model_with_expected_params(self, monkeypatch):
         monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
         mock_client = _make_mock_client("pong")
-        with patch("safety_rag.generation.llm.get_client", return_value=mock_client):
+        with patch(
+            "safety_rag.generation.llm.get_client", return_value=mock_client
+        ):
             generate("hello")
             mock_client.chat.completions.create.assert_called_once_with(
                 model="MiniMax-M2",
@@ -128,7 +136,9 @@ class TestGenerate:
     def test_passes_prompt_through_unmodified(self, monkeypatch):
         monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
         mock_client = _make_mock_client("pong")
-        with patch("safety_rag.generation.llm.get_client", return_value=mock_client):
+        with patch(
+            "safety_rag.generation.llm.get_client", return_value=mock_client
+        ):
             generate("a very specific prompt")
             _, kwargs = mock_client.chat.completions.create.call_args
             assert kwargs["messages"][0]["content"] == "a very specific prompt"

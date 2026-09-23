@@ -24,7 +24,9 @@ def generate(prompt: str) -> str:
 
     return _strip_thinking(raw)
 
+
 _THINK_TAG_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
 
 def _strip_thinking(text: str) -> str:
     """Remove any <think>...</think> reasoning block a model may emit
