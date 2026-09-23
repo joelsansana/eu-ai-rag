@@ -1,68 +1,134 @@
-from __future__ import annotations
+import re
+import os
+import pytest
 
+from safety_rag.generation.llm import _strip_thinking, generate, get_client
 from unittest.mock import MagicMock, patch
 
-import pytest
-from openai import OpenAI
+@pytest.mark.integration
+def test_generate_pong():
+    output = generate("Reply with one word: pong.")
+
+    assert output is not None, "generate() returned None"
+    assert isinstance(output, str), f"Expected str, got {type(output)}"
+
+    # Normalize: lowercase, strip whitespace, drop surrounding punctuation
+    normalized = re.sub(r"[^\w\s]", "", output).strip().lower()
+
+    assert normalized == "pong", f"Expected 'pong', got: {output!r}"
 
 
-def test_get_client_returns_openai_instance() -> None:
-    from safety_rag.generation.llm import get_client
+# ---------------------------------------------------------------------------
+# _strip_thinking — pure function, no mocking needed
+# ---------------------------------------------------------------------------
 
-    client = get_client()
+class TestStripThinking:
+    def test_no_think_tag_passthrough(self):
+        assert _strip_thinking("pong") == "pong"
 
-    assert isinstance(client, OpenAI)
-    assert "minimax.io" in str(client.base_url)
+    def test_strips_single_think_block(self):
+        text = "<think>reasoning here</think>pong"
+        assert _strip_thinking(text) == "pong"
 
+    def test_strips_think_block_with_surrounding_whitespace(self):
+        text = "  <think>reasoning</think>  pong  "
+        assert _strip_thinking(text) == "pong"
 
-def test_get_client_missing_api_key_raises(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
-    from safety_rag.generation.llm import get_client
+    def test_strips_multiline_think_block(self):
+        text = "<think>\nstep 1\nstep 2\n</think>\npong"
+        assert _strip_thinking(text) == "pong"
 
-    with pytest.raises(KeyError, match="MINIMAX_API_KEY"):
-        get_client()
+    def test_strips_multiple_think_blocks(self):
+        text = "<think>a</think>pong<think>b</think>"
+        assert _strip_thinking(text) == "pong"
 
+    def test_empty_string(self):
+        assert _strip_thinking("") == ""
 
-def _fake_response(content: str | None) -> MagicMock:
-    response = MagicMock()
-    response.choices = [MagicMock()]
-    response.choices[0].message.content = content
-    return response
+    def test_only_think_block_returns_empty(self):
+        assert _strip_thinking("<think>only reasoning, no answer</think>") == ""
 
+    def test_unclosed_think_tag_not_stripped(self):
+        # No closing tag -> regex shouldn't match, text passes through (stripped)
+        text = "<think>never closes pong"
+        assert _strip_thinking(text) == text.strip()
 
-def test_generate_calls_chat_completions_with_expected_args() -> None:
-    from safety_rag.generation.llm import generate
-
-    mock_client = MagicMock(spec=OpenAI)
-    mock_client.chat.completions.create.return_value = _fake_response("pong")
-
-    with patch(
-        "safety_rag.generation.llm.get_client",
-        return_value=mock_client,
-    ):
-        result = generate("Reply with one word: pong.")
-
-    assert result == "pong"
-    mock_client.chat.completions.create.assert_called_once()
-    call_kwargs = mock_client.chat.completions.create.call_args.kwargs
-    assert call_kwargs["model"] == "MiniMax-M2"
-    assert call_kwargs["messages"] == [
-        {"role": "user", "content": "Reply with one word: pong."}
-    ]
+    def test_text_before_and_after_think_block(self):
+        text = "prefix <think>hidden</think> suffix"
+        assert _strip_thinking(text) == "prefix  suffix"
 
 
-def test_generate_returns_empty_string_when_content_is_none() -> None:
-    from safety_rag.generation.llm import generate
+# ---------------------------------------------------------------------------
+# get_client
+# ---------------------------------------------------------------------------
 
-    mock_client = MagicMock(spec=OpenAI)
-    mock_client.chat.completions.create.return_value = _fake_response(None)
+class TestGetClient:
+    def test_uses_env_api_key_and_base_url(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key-123")
+        with patch("safety_rag.generation.llm.OpenAI") as mock_openai:
+            get_client()
+            mock_openai.assert_called_once_with(
+                base_url="https://api.minimax.io/v1",
+                api_key="test-key-123",
+            )
 
-    with patch(
-        "safety_rag.generation.llm.get_client",
-        return_value=mock_client,
-    ):
-        result = generate("hi")
+    def test_missing_api_key_raises(self, monkeypatch):
+        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
+        with pytest.raises(KeyError):
+            get_client()
 
-    assert result == ""
+
+# ---------------------------------------------------------------------------
+# generate — mock the OpenAI client so no network call is made
+# ---------------------------------------------------------------------------
+
+def _make_mock_client(content: str | None):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content=content))]
+    mock_client.chat.completions.create.return_value = mock_response
+    return mock_client
+
+
+class TestGenerate:
+    def test_returns_stripped_content(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        with patch(
+            "safety_rag.generation.llm.get_client",
+            return_value=_make_mock_client("pong"),
+        ):
+            assert generate("Reply with one word: pong.") == "pong"
+
+    def test_strips_think_tags_from_response(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        with patch(
+            "safety_rag.generation.llm.get_client",
+            return_value=_make_mock_client("<think>let me consider</think>pong"),
+        ):
+            assert generate("ping") == "pong"
+
+    def test_none_content_returns_empty_string(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        with patch(
+            "safety_rag.generation.llm.get_client",
+            return_value=_make_mock_client(None),
+        ):
+            assert generate("ping") == ""
+
+    def test_calls_model_with_expected_params(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        mock_client = _make_mock_client("pong")
+        with patch("safety_rag.generation.llm.get_client", return_value=mock_client):
+            generate("hello")
+            mock_client.chat.completions.create.assert_called_once_with(
+                model="MiniMax-M2",
+                messages=[{"role": "user", "content": "hello"}],
+            )
+
+    def test_passes_prompt_through_unmodified(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        mock_client = _make_mock_client("pong")
+        with patch("safety_rag.generation.llm.get_client", return_value=mock_client):
+            generate("a very specific prompt")
+            _, kwargs = mock_client.chat.completions.create.call_args
+            assert kwargs["messages"][0]["content"] == "a very specific prompt"

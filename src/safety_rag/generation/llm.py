@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 from openai import OpenAI
 
@@ -19,5 +20,13 @@ def generate(prompt: str) -> str:
         model="MiniMax-M2",
         messages=[{"role": "user", "content": prompt}],
     )
+    raw = response.choices[0].message.content or ""
 
-    return response.choices[0].message.content or ""
+    return _strip_thinking(raw)
+
+_THINK_TAG_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+def _strip_thinking(text: str) -> str:
+    """Remove any <think>...</think> reasoning block a model may emit
+    inline in its response content (safety net even with thinking disabled)."""
+    return _THINK_TAG_RE.sub("", text).strip()
