@@ -1,7 +1,6 @@
 # `eu-ai-rag`
 
 > **A pre-registered, eval-gated RAG system over the EU AI Act and NIS2 Directive.**
-> Built to serve two purposes simultaneously: a Lepanto-internal "what does compliance look like for our customers" tool, and a portfolio piece with a defensible engineering story.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
