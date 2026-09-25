@@ -1,6 +1,8 @@
 # TUTORIAL
 
 > Step-by-step build guide for `eu-ai-rag`. You are reading this because you want to **build the project yourself**, using these notes as a tutorial rather than running a generated scaffold.
+>
+> **Last corrected 2026-09-25** by Number One against the actual code: phases 0–2 verified against `src/safety_rag/`, `tests/`, `scripts/`, `pyproject.toml`, and the GitHub Actions workflow. The phase map below reflects the build's current state (0–2 ✅ done, 3–5 ⬜ planned).
 
 This file is the entry point. The per-phase files (`TUTORIAL/phase-0-setup.md`, `phase-1-ingestion.md`, …) are the actual build instructions. Read this first, then go in order.
 
@@ -27,9 +29,9 @@ The defining feature is the **eval loop**: a golden set + Hit@5/MRR metrics + LL
 
 | Phase | Deliverable | Hours | Status |
 |---|---|---|---|
-| 0 | Repo skeleton + CI running lint+tests | 2–3 | ⬜ |
-| 1 | Corpus downloaded, parsed, chunked, versioned | 5–6 | ⬜ |
-| 2 | Dense retrieval + naive RAG answering | 4–5 | ⬜ |
+| 0 | Repo skeleton + CI running lint+tests | 2–3 | ✅ |
+| 1 | Corpus downloaded, parsed, chunked, versioned | 5–6 | ✅ |
+| 2 | Dense retrieval + naive RAG answering | 4–5 | ✅ |
 | 3 | FastAPI app in Docker | 5–6 | ⬜ |
 | 4 | Golden set + metrics + CI regression gate | 8–10 | ⬜ |
 | 5 | Hybrid search + reranker (conditional) | 4–5 | ⬜ |
@@ -44,50 +46,56 @@ You will need:
 - **uv** — the package manager ([install instructions](https://docs.astral.sh/uv/)); `uv --version`
 - **Docker + Docker Compose** — for Phase 3 onwards; `docker --version && docker compose version`
 - **A MiniMax API key** — for the LLM-as-judge and generation calls; the dev cycle is ~€5 total
-- **GitHub CLI authenticated** — already done (`gh auth status` should show `joelsansana`)
-- **A Qdrant container** — comes via `docker-compose.yml` in Phase 3, but for Phase 2 testing you can run it standalone with `docker run -p 6333:6333 qdrant/qdrant`
+- **GitHub CLI authenticated** — `gh auth status` should show your handle
+- **A Qdrant container** — for Phase 2 testing you can run it standalone with `docker run -p 6333:6333 qdrant/qdrant`. Phase 3 will introduce `docker-compose.yml` for app + Qdrant.
 
 ## The end-state repo layout
 
-```
+```text
 eu-ai-rag/
-├── README.md                    # The centerpiece (existing — don't touch for now)
+├── README.md                    # Public overview
+├── BUILD_PLAN.md                # What was built and why
 ├── TUTORIAL.md                  # This file
 ├── TUTORIAL/
-│   ├── phase-0-setup.md
-│   ├── phase-1-ingestion.md
-│   ├── phase-2-retrieval-v1.md
-│   ├── phase-3-api.md
-│   ├── phase-4-eval.md
-│   └── phase-5-retrieval-v2.md
+│   ├── phase-0-setup.md         ✅
+│   ├── phase-1-ingestion.md     ✅
+│   ├── phase-2-retrieval-v1.md  ✅
+│   ├── phase-3-api.md           ⬜
+│   ├── phase-4-eval.md          ⬜
+│   └── phase-5-retrieval-v2.md  ⬜
 ├── pyproject.toml               # uv-managed; ruff, pyright, pytest
-├── Dockerfile                   # multi-stage, slim, non-root user, venv
-├── docker-compose.yml           # app + qdrant
-├── .github/workflows/
-│   ├── ci.yml                   # lint, types, tests on every PR
-│   └── eval.yml                 # retrieval eval + Hit@5 regression gate on every PR
+├── LICENSE                      # MIT
+├── CONTRIBUTING.md
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml               # lint, types, tests on every PR
+│   │   └── eval.yml             # (planned) retrieval eval + Hit@5 regression gate
+│   ├── ISSUE_TEMPLATE/
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── src/safety_rag/
-│   ├── ingestion/               # eur_lex.py, chunker, metadata
-│   ├── retrieval/               # embedder, vector_store, hybrid_search, reranker
-│   ├── generation/              # llm (MiniMax-M2), prompts, citations
-│   ├── api/                     # main.py, schemas.py, auth
-│   └── eval/                    # golden loader, metrics, judge
+│   ├── __init__.py              # package entry point: main()
+│   ├── ingestion/               # eur_lex.py (parser), chunker.py (Article-aware + long-annex split)
+│   ├── retrieval/               # embedder.py (bge-small-en-v1.5), vector_store.py (Qdrant)
+│   ├── generation/              # llm.py (MiniMax-M2 via OpenAI SDK), prompts.py (RAG_PROMPT + helpers)
+│   ├── api/                     # ask.py (end-to-end ask() function — Phase 3 wraps this in FastAPI)
+│   └── eval/                    # (planned) golden loader, metrics, judge
 ├── scripts/
-│   ├── download_corpus          # EUR-Lex fetcher (CELEX 32024R1689, 32022L2555)
-│   ├── build_index              # parse → chunk → embed → qdrant upsert
-│   ├── run_eval                 # pytest-like eval runner
-│   └── run_eval_gen             # nightly generation eval
+│   ├── download_corpus.py       # EUR-Lex/Cellar fetcher (CELEX 32024R1689, 32022L2555)
+│   └── build_index.py           # load data/processed/*.jsonl → upsert to Qdrant
 ├── evals/
-│   ├── golden/
-│   │   ├── lepanto.jsonl        # ~25 customer-shaped questions
-│   │   ├── demo.jsonl           # ~25 regulation-shaped questions
-│   │   └── unanswerable.jsonl   # ~10 unanswerable (for abstention test)
+│   ├── golden/                  # (planned) lepanto.jsonl, demo.jsonl, unanswerable.jsonl
 │   └── results/                 # gitignored; eval outputs / Hit@5 history
-├── tests/                       # unit + integration (Qdrant in-memory)
+├── tests/                       # unit + integration (Qdrant + real LLM); integration skipped by default
 └── data/                        # gitignored; raw HTML + intermediate JSONL
 ```
 
-The layout matches the README's "Repo layout" section, so you can cross-reference as you build.
+**Layout notes (corrections from the original tutorial):**
+
+- `scripts/run_eval` and `scripts/run_eval_gen` are planned for Phase 4, not yet present.
+- `Dockerfile` and `docker-compose.yml` are planned for Phase 3, not yet present.
+- `.github/workflows/eval.yml` is planned for Phase 4, not yet present.
+- `src/safety_rag/api/main.py`, `schemas.py`, and `auth.py` are planned for Phase 3. Phase 2 only has `api/ask.py`.
+- `src/safety_rag/eval/` is planned for Phase 4, not yet present.
 
 ## Decision overrides
 
@@ -95,11 +103,12 @@ The decisions in the README are starting points. If you disagree with any, chang
 
 | Decision | Likely override scenario |
 |---|---|
-| Corpus | Add DORA / Cyber Resilience Act / Data Act later (schema already accommodates this) |
+| Corpus | Add DORA / Cyber Resilience Act / Data Act later (the parser's `CELEX_TO_REGULATION` map accommodates this) |
 | Embeddings | Swap `bge-small-en-v1.5` → `bge-m3` if multilingual recall matters for your Lepanto customers |
 | LLM | Swap MiniMax-M2 → GPT-4o or Claude if you want a different cost/quality profile |
 | Vector store | Swap Qdrant → pgvector if you'd rather stay in Postgres-land |
 | Package mgmt | Drop `uv` for `poetry`/`pdm` if you have a preference |
+| Token estimation | Swap the regex-based `_estimate_tokens` for `tiktoken` if you need byte-level accuracy |
 
 Whatever you change, document it in the README's decisions table with the new rationale. The eval loop will surface whether the change helped or hurt.
 
@@ -109,6 +118,7 @@ Whatever you change, document it in the README's decisions table with the new ra
 - No fine-tuning, no agents, no Kubernetes, no real auth (env-var API token only)
 - No multi-language UI, no persistent user history, no streaming partials
 - No fine-tuned embeddings
+- **No `reasoning` parameter on `generate()`.** The user-facing path is faster without it; if you need reasoning (e.g. for the Phase 4 LLM-as-judge), add a separate function instead of a flag.
 
 If something is tempting you into scope creep, write it down in the README's "Known limitations / honest failures" section as a future-work item and move on.
 
