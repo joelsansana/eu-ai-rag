@@ -1,10 +1,76 @@
----
-tags: [career, project, plan, rag, lepanto, regulatory]
-created: 2026-09-13
-curator: Number One 🖖
+# `eu-ai-rag`
+
+> **A pre-registered, eval-gated RAG system over the EU AI Act and NIS2 Directive.**
+> Built to serve two purposes simultaneously: a Lepanto-internal "what does compliance look like for our customers" tool, and a portfolio piece with a defensible engineering story.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/managed%20with-uv-blueviolet.svg)](https://docs.astral.sh/uv/)
+
 ---
 
-## TL;DR — what this is and what it costs
+## What is this?
+
+A retrieval-augmented generation system over the EU AI Act (Regulation (EU) 2024/1689) and the NIS2 Directive (Directive (EU) 2022/2555), sourced from EUR-Lex. The corpus is structured, machine-readable, and authoritative — and the two regulations reference each other, so a single-corpus RAG is genuinely useful rather than a demo toy.
+
+The interesting thing about this build is not the retrieval. It is the **eval loop**: a golden set, Hit@5 / MRR metrics, an LLM-as-judge faithfulness check, and a CI regression gate that fails a pull request when retrieval quality drops. That loop is the same pattern every serious ML system needs.
+
+For the full build plan, decisions, and architecture, see [`BUILD_PLAN.md`](./BUILD_PLAN.md). For step-by-step build guides, see [`TUTORIAL.md`](./TUTORIAL.md).
+
+## Status
+
+**Phases 0–2 done.** Repo skeleton, EUR-Lex corpus ingestion, and dense retrieval v1 are merged and tested. The eval gate (Phase 4) and FastAPI surface (Phase 3) are next.
+
+## Why EU AI Act + NIS2?
+
+The corpus choice is deliberate. Both regulations apply to Lepanto's target customers — chemical operators, port operators, OT-rich mid-market manufacturers. The AI Act covers high-risk AI systems (Annex III); NIS2 covers cybersecurity of essential entities. Together they define the compliance landscape for industrial AI in critical infrastructure. A RAG over both is the artefact we can hand to a customer and say: *"What's your deployer-obligations question? Here's an answer with citations to specific Articles."*
+
+## Quickstart (dev)
+
+```bash
+git clone https://github.com/joelsansana/eu-ai-rag.git
+cd eu-ai-rag
+uv sync --all-extras
+uv run pytest -q
+```
+
+You will need Python 3.12 and [`uv`](https://docs.astral.sh/uv/). Docker is required from Phase 3 onwards; the integration tests (LLM-as-judge against MiniMax) need a `MINIMAX_API_KEY` and are skipped by default.
+
+## Repository layout
+
+```
+eu-ai-rag/
+├── README.md              # This file
+├── BUILD_PLAN.md          # What was built and why
+├── TUTORIAL.md            # Step-by-step build guide
+├── TUTORIAL/              # Per-phase build guides
+├── LICENSE                # MIT
+├── CONTRIBUTING.md
+├── pyproject.toml
+├── .github/
+│   ├── workflows/ci.yml
+│   └── ISSUE_TEMPLATE/ + PULL_REQUEST_TEMPLATE.md
+├── src/safety_rag/
+│   ├── ingestion/         # EUR-Lex parsing, chunking
+│   ├── retrieval/         # embedder, vector store
+│   ├── generation/        # LLM client, prompts, citations
+│   ├── api/               # FastAPI (Phase 3)
+│   └── eval/              # golden set, metrics, judge (Phase 4)
+├── scripts/               # download_corpus, build_index
+├── tests/
+├── evals/                 # golden sets (planned)
+└── data/                  # gitignored
+```
+
+## Contributing
+
+Issues and pull requests welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the conventions. For substantial changes, please open an issue first.
+
+## License
+
+[MIT](./LICENSE) — Joel Sansana, 2026.
+
+## TL;DR — what it is and what it costs
 
 > **One-sentence pitch:** A eval-gated RAG system over the EU AI Act + NIS2 Directive, demonstrating customer-empathy for Lepanto (you build the tool your customers will need) and interview-defensible engineering (you own the full eval loop, with regression gating in CI).
 >
@@ -135,19 +201,3 @@ This section is filled in **as the project progresses**, not at the end. The str
 - [ ] **No GDPR audit log.** Every query is logged, but query-data-retention isn't aligned with GDPR Article 30 records. *Mitigation:* document in README; out-of-scope for Lepanto-internal demo, in-scope if this ever ships to real customers.
 
 *This section gets revisited at every phase boundary and at the end of Phase 6.*
-
-## How this maps to interviews
-
-| Probe | Your answer |
-|---|---|
-| "How did you validate the Copilot Studio chatbot at Dow?" | "Copilot Studio has limited eval tooling — that's exactly why I built eu-ai-nis2-rag, where I own the full eval loop: golden set, Hit@5/MRR, LLM-judge faithfulness, CI regression gating. And it doubled as a Lepanto customer tool — I think about compliance from the customer's side, not just the demo side." |
-| "Experience with API inference?" | FastAPI + SSE streaming + Docker, production patterns. The corpus is the EU AI Act + NIS2 (regulatory, structured, multilingual-adjacent) — every answer is cited to a specific Article and CELEX number. |
-| "MLOps experience?" | CI/CD with quality gates on retrieval metrics — beyond deploy-and-forget. The eval-gate.yml file is a literal `pytest` for retrieval quality; PR blocked if Hit@5 regresses >2 points. |
-| "When was vanilla RAG not enough?" | "It depends on the corpus. On CSB PDFs, hybrid + reranker was the difference between 0.6 and 0.85 Hit@5. On the EU AI Act + NIS2, vanilla RAG already hits ≥0.85 with structure-aware chunking — the engineering value was the eval loop, not the retrieval upgrades. Pre-registered threshold tells you when 'not enough' is a statement and when it's a story." |
-| "Talk about a project with a real customer angle." | "The Lepanto tier of eu-ai-nis2-rag is built against customer questions Lepanto's port-zone customers ask me — Article 26 deployer obligations, NIS2 cybersecurity baselines for chemical operators. The portfolio piece is the same artifact. Customer-empathy by design, not by accident." |
-| "Familiarity with EU AI Act / NIS2?" | "I built an eval-gated RAG over the regulations so my Lepanto customers could ask 'what does compliance look like' without hiring a lawyer. The eval threshold forces me to ship accurate answers, not plausible ones." |
-
-Note the elegant moves in this table:
-1. The project becomes your answer to the hardest question about your *existing* work (Dow Copilot Studio) — you've converted a weakness into a demonstrated strength.
-2. The corpus choice (regulatory) means the project demonstrates *customer empathy*, not just engineering ability — the Lepanto angle is your second-order positioning move.
-3. The pre-registered failure threshold in the TL;DR means your v1→v2 narrative is defensible regardless of the numbers — you've separated "ship and measure" from "decide if it needs more work".
