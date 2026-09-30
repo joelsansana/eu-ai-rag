@@ -7,13 +7,17 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "openai>=3.17.0",
+    "pydantic>=2.13.5",
     "qdrant-client>=1.19.1",
     "requests>=2.34.2",
     "selectolax>=0.4.11",
     "sentence-transformers>=6.1.0",
+    "sse-starlette>=3.4.11",
     "tiktoken>=0.14.0",
+    "uvicorn>=0.54.0",
 ]
 
 [project.scripts]

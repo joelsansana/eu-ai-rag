@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import uuid
 from typing import Any
 
@@ -25,8 +26,10 @@ PAYLOAD_FIELDS = (
 )
 
 
-def get_client(url: str = "http://localhost:6333") -> QdrantClient:
-    """Local dev Qdrant client. Point at a different url for other envs."""
+def get_client(url: str | None = None) -> QdrantClient:
+    """Qdrant client. Defaults to QDRANT_URL env var, then localhost for dev.
+    Pass url explicitly to override either."""
+    url = url or os.environ.get("QDRANT_URL", "http://localhost:6333")
     return QdrantClient(url=url)
 
 
@@ -89,7 +92,9 @@ def upsert_chunks(
 
 
 def _build_filter(
-    regulation: str | None, article_num: str | None
+    regulation: str | None,
+    article_num: int | None,
+    part: str | None = None,
 ) -> qmodels.Filter | None:
     conditions: list[qmodels.Condition] = []
 
@@ -105,6 +110,12 @@ def _build_filter(
                 key="article_num", match=qmodels.MatchValue(value=article_num)
             )
         )
+    if part is not None:
+        conditions.append(
+            qmodels.FieldCondition(
+                key="part", match=qmodels.MatchValue(value=part)
+            )
+        )
 
     if not conditions:
         return None
@@ -115,7 +126,8 @@ def search(
     query_embedding: list[float],
     *,
     regulation: str | None = None,
-    article_num: str | None = None,
+    article_num: int | None = None,
+    part: str | None = None,
     k: int = 5,
     client: QdrantClient | None = None,
     collection_name: str = COLLECTION_NAME,
@@ -123,7 +135,7 @@ def search(
     """Cosine-similarity search, optionally filtered by regulation and/or
     article_num. Returns up to k ScoredPoint results, highest score first."""
     client = client or get_client()
-    query_filter = _build_filter(regulation, article_num)
+    query_filter = _build_filter(regulation, article_num, part)
 
     response = client.query_points(
         collection_name=collection_name,

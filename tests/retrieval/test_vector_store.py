@@ -60,6 +60,22 @@ class TestGetClient:
             get_client(url="http://qdrant.internal:6333")
             mock_cls.assert_called_once_with(url="http://qdrant.internal:6333")
 
+    def test_uses_qdrant_url_env_var(self, monkeypatch):
+        monkeypatch.setenv("QDRANT_URL", "http://qdrant:6333")
+        with patch(
+            "safety_rag.retrieval.vector_store.QdrantClient"
+        ) as mock_cls:
+            get_client()
+            mock_cls.assert_called_once_with(url="http://qdrant:6333")
+
+    def test_explicit_url_overrides_env_var(self, monkeypatch):
+        monkeypatch.setenv("QDRANT_URL", "http://qdrant:6333")
+        with patch(
+            "safety_rag.retrieval.vector_store.QdrantClient"
+        ) as mock_cls:
+            get_client(url="http://other:6333")
+            mock_cls.assert_called_once_with(url="http://other:6333")
+
 
 # ---------------------------------------------------------------------------
 # ensure_collection
@@ -273,14 +289,14 @@ class TestBuildFilter:
         assert _match_value(conditions[0]) == "ai_act"
 
     def test_article_num_only(self):
-        result = _build_filter(None, "26")
+        result = _build_filter(None, 26)
         conditions = _field_conditions(result)
         assert len(conditions) == 1
         assert conditions[0].key == "article_num"
-        assert _match_value(conditions[0]) == "26"
+        assert _match_value(conditions[0]) == 26
 
     def test_both_filters_combined_with_and(self):
-        result = _build_filter("ai_act", "26")
+        result = _build_filter("ai_act", 26)
         conditions = _field_conditions(result)
         assert len(conditions) == 2
         keys = {cond.key for cond in conditions}
@@ -312,7 +328,7 @@ class TestSearch:
         client = MagicMock()
         client.query_points.return_value = MagicMock(points=[])
 
-        search([0.1], regulation="nis2", article_num="21", client=client)
+        search([0.1], regulation="nis2", article_num=21, client=client)
 
         _, kwargs = client.query_points.call_args
         query_filter = kwargs["query_filter"]
