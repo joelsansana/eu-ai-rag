@@ -13,12 +13,29 @@ def get_client() -> OpenAI:
     )
 
 
-def generate(prompt: str) -> str:
+def generate(prompt: str, *, temperature: float | None = None) -> str:
+    """Generate a completion from MiniMax-M2.7-highspeed.
+
+    MiniMax-M2.7-highspeed always reasons internally — there is no way to disable
+    thinking for this model family, so no reasoning-mode toggle exists
+    here. Thinking arrives inline as <think>...</think> and is stripped
+    before returning.
+
+    temperature: optional sampling temperature, range [0, 2] per MiniMax's
+    API (defaults to 1 server-side if omitted). Pass a low value (e.g. 0.2)
+    for deterministic/structured tasks like golden-set generation.
+    """
     client = get_client()
 
+    kwargs: dict[str, float] = {}
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+
     response = client.chat.completions.create(
-        model="MiniMax-M2",
+        #model="MiniMax-M2.7-highspeed",
+        model="MiniMax-M3",
         messages=[{"role": "user", "content": prompt}],
+        **kwargs,
     )
     raw = response.choices[0].message.content or ""
 

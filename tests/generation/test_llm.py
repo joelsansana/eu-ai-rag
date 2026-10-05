@@ -129,7 +129,7 @@ class TestGenerate:
         ):
             generate("hello")
             mock_client.chat.completions.create.assert_called_once_with(
-                model="MiniMax-M2",
+                model="MiniMax-M2.7-highspeed",
                 messages=[{"role": "user", "content": "hello"}],
             )
 
@@ -142,3 +142,61 @@ class TestGenerate:
             generate("a very specific prompt")
             _, kwargs = mock_client.chat.completions.create.call_args
             assert kwargs["messages"][0]["content"] == "a very specific prompt"
+
+    def test_passes_temperature_when_given(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        captured = {}
+
+        class FakeMessage:
+            content = "ok"
+
+        class FakeChoice:
+            message = FakeMessage()
+
+        class FakeResponse:
+            choices = [FakeChoice()]
+
+        class FakeCompletions:
+            def create(self, **kwargs):
+                captured.update(kwargs)
+                return FakeResponse()
+
+        class FakeChat:
+            completions = FakeCompletions()
+
+        class FakeClient:
+            chat = FakeChat()
+
+        with patch("safety_rag.generation.llm.get_client", return_value=FakeClient()):
+            generate("hi", temperature=0.2)
+
+        assert captured["temperature"] == 0.2
+
+    def test_omits_temperature_when_not_given(self, monkeypatch):
+        monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+        captured = {}
+
+        class FakeMessage:
+            content = "ok"
+
+        class FakeChoice:
+            message = FakeMessage()
+
+        class FakeResponse:
+            choices = [FakeChoice()]
+
+        class FakeCompletions:
+            def create(self, **kwargs):
+                captured.update(kwargs)
+                return FakeResponse()
+
+        class FakeChat:
+            completions = FakeCompletions()
+
+        class FakeClient:
+            chat = FakeChat()
+
+        with patch("safety_rag.generation.llm.get_client", return_value=FakeClient()):
+            generate("hi")
+
+        assert "temperature" not in captured
