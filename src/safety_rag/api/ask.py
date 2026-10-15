@@ -28,7 +28,9 @@ def ask(
     if not answer:
         return {
             "answer": None,
-            "sources": [{"score": r.score, **(r.payload or {})} for r in results],
+            "sources": [
+                {"score": r.score, **(r.payload or {})} for r in results
+            ],
         }
 
     prompt = build_prompt(question, results)

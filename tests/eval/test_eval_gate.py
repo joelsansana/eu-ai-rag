@@ -6,6 +6,7 @@ The gate's contract:
 - baseline unfetchable / invalid  -> pass with warning (bootstrap case)
 - current file broken or metric missing -> exit non-zero (GATE ERROR)
 """
+
 from __future__ import annotations
 
 import json
@@ -26,7 +27,10 @@ def _write(path: Path, data: dict) -> Path:
 
 @pytest.fixture
 def current_file(tmp_path: Path) -> Path:
-    return _write(tmp_path / "current.json", {"hit_at_5": 0.81, "n_questions": 31})
+    return _write(
+        tmp_path / "current.json",
+        {"hit_at_5": 0.81, "n_questions": 31},
+    )
 
 
 class TestFetchBaseline:
@@ -34,12 +38,18 @@ class TestFetchBaseline:
         baseline_file = _write(tmp_path / "baseline.json", {"hit_at_5": 0.84})
         monkeypatch.setattr(
             "eval_gate.requests.get",
-            lambda url, timeout: type("R", (), {
-                "text": baseline_file.read_text(),
-                "raise_for_status": lambda self: None,
-            })(),
+            lambda url, timeout: type(
+                "R",
+                (),
+                {
+                    "text": baseline_file.read_text(),
+                    "raise_for_status": lambda self: None,
+                },
+            )(),
         )
-        assert fetch_baseline("http://example.com/baseline.json") == {"hit_at_5": 0.84}
+        assert fetch_baseline("http://example.com/baseline.json") == {
+            "hit_at_5": 0.84
+        }
 
     def test_network_error_raises_baseline_not_found(self, monkeypatch):
         import requests as _requests
@@ -54,10 +64,14 @@ class TestFetchBaseline:
     def test_invalid_json_raises_baseline_not_found(self, monkeypatch):
         monkeypatch.setattr(
             "eval_gate.requests.get",
-            lambda url, timeout: type("R", (), {
-                "text": "not json",
-                "raise_for_status": lambda self: None,
-            })(),
+            lambda url, timeout: type(
+                "R",
+                (),
+                {
+                    "text": "not json",
+                    "raise_for_status": lambda self: None,
+                },
+            )(),
         )
         with pytest.raises(BaselineNotFoundError):
             fetch_baseline("http://example.com/baseline.json")
@@ -83,24 +97,39 @@ class TestMainGate:
         current_file = _write(tmp_path / "current.json", current)
         monkeypatch.setattr(
             "eval_gate.requests.get",
-            lambda url, timeout: type("R", (), {
-                "text": baseline_file.read_text(),
-                "raise_for_status": lambda self: None,
-            })(),
+            lambda url, timeout: type(
+                "R",
+                (),
+                {
+                    "text": baseline_file.read_text(),
+                    "raise_for_status": lambda self: None,
+                },
+            )(),
         )
         argv = [
             "eval_gate.py",
-            "--current", str(current_file),
-            "--baseline-url", "http://example.com/baseline.json",
-            "--metric", "hit_at_5",
-            "--tolerance", "0.02",
+            "--current",
+            str(current_file),
+            "--baseline-url",
+            "http://example.com/baseline.json",
+            "--metric",
+            "hit_at_5",
+            "--tolerance",
+            "0.02",
         ]
         monkeypatch.setattr(sys, "argv", argv)
         main()
 
-    def test_passes_when_within_tolerance(self, monkeypatch, tmp_path, current_file):
+    def test_passes_when_within_tolerance(
+        self, monkeypatch, tmp_path, current_file
+    ):
         # 0.83 vs baseline 0.84 = a 1-point drop, inside the 2-point tolerance
-        self._run(monkeypatch, tmp_path, {"hit_at_5": 0.84}, {"hit_at_5": 0.83})
+        self._run(
+            monkeypatch,
+            tmp_path,
+            {"hit_at_5": 0.84},
+            {"hit_at_5": 0.83},
+        )
 
     def test_passes_at_exactly_tolerance_boundary(self, monkeypatch, tmp_path):
         self._run(monkeypatch, tmp_path, {"hit_at_5": 0.84}, {"hit_at_5": 0.82})
@@ -109,29 +138,50 @@ class TestMainGate:
         # sys.exit(str) carries the message as the exit code; the interpreter
         # prints it to stderr only at top level, so assert on the code.
         with pytest.raises(SystemExit) as exc:
-            self._run(monkeypatch, tmp_path, {"hit_at_5": 0.84}, {"hit_at_5": 0.79})
+            self._run(
+                monkeypatch,
+                tmp_path,
+                {"hit_at_5": 0.84},
+                {"hit_at_5": 0.79},
+            )
         assert exc.value.code != 0
         assert "GATE FAILED" in str(exc.value.code)
 
-    def test_missing_baseline_passes_with_warning(self, monkeypatch, tmp_path, current_file, capsys):
+    def test_missing_baseline_passes_with_warning(
+        self, monkeypatch, tmp_path, current_file, capsys
+    ):
         import requests as _requests
 
         def boom(url, timeout):
             raise _requests.ConnectionError("404")
 
         monkeypatch.setattr("eval_gate.requests.get", boom)
-        monkeypatch.setattr(sys, "argv", [
-            "eval_gate.py",
-            "--current", str(current_file),
-            "--baseline-url", "http://example.com/baseline.json",
-            "--metric", "hit_at_5",
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "eval_gate.py",
+                "--current",
+                str(current_file),
+                "--baseline-url",
+                "http://example.com/baseline.json",
+                "--metric",
+                "hit_at_5",
+            ],
+        )
         with pytest.raises(SystemExit) as exc:
             main()
         assert exc.value.code == 0  # explicit pass
         assert "No baseline found" in capsys.readouterr().out
 
-    def test_metric_missing_from_current_is_gate_error(self, monkeypatch, tmp_path):
+    def test_metric_missing_from_current_is_gate_error(
+        self, monkeypatch, tmp_path
+    ):
         with pytest.raises(SystemExit) as exc:
-            self._run(monkeypatch, tmp_path, {"hit_at_5": 0.84}, {"n_questions": 5})
+            self._run(
+                monkeypatch,
+                tmp_path,
+                {"hit_at_5": 0.84},
+                {"n_questions": 5},
+            )
         assert "GATE ERROR" in str(exc.value) or exc.value.code != 0

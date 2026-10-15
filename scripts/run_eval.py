@@ -11,9 +11,12 @@ questions model a realistic user, who wouldn't pass internal filters.
 
 Usage:
     uv run python scripts/run_eval.py --tier lepanto
-    uv run python scripts/run_eval.py --tier demo --output evals/results/demo_run.json
-    uv run python scripts/run_eval.py --tier lepanto --output evals/results/baseline.json --summary-only
+    uv run python scripts/run_eval.py --tier demo \
+        --output evals/results/demo_run.json
+    uv run python scripts/run_eval.py --tier lepanto \
+        --output evals/results/baseline.json --summary-only
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,7 +41,9 @@ def run_retrieval_eval(
     hits, mrrs, recalls, failures = [], [], [], []
     per_question = []
 
-    lines = [l for l in golden_path.read_text().splitlines() if l.strip()]
+    lines = [
+        line for line in golden_path.read_text().splitlines() if line.strip()
+    ]
 
     for line in lines:
         q = json.loads(line)
@@ -58,20 +63,24 @@ def run_retrieval_eval(
         hits.append(hit)
         mrrs.append(mrr)
         recalls.append(recall)
-        per_question.append({
-            "q_id": q.get("q_id"),
-            "question": q["question"],
-            "difficulty": q.get("difficulty"),
-            "hit": hit,
-            "mrr": mrr,
-            "recall": recall,
-            "retrieved_ids": ids,
-        })
+        per_question.append(
+            {
+                "q_id": q.get("q_id"),
+                "question": q["question"],
+                "difficulty": q.get("difficulty"),
+                "hit": hit,
+                "mrr": mrr,
+                "recall": recall,
+                "retrieved_ids": ids,
+            }
+        )
 
     if failures:
         logger.warning(
             "%d/%d questions failed and were excluded: %s",
-            len(failures), len(failures) + len(hits), failures,
+            len(failures),
+            len(failures) + len(hits),
+            failures,
         )
 
     return {
@@ -88,22 +97,32 @@ def run_retrieval_eval(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tier", required=True, choices=["lepanto", "demo"])
-    parser.add_argument("--k-hit", type=int, default=5, help="k for Hit@k (default 5)")
     parser.add_argument(
-        "--k-rank", type=int, default=10, help="k for MRR@k / Recall@k (default 10)"
+        "--k-hit",
+        type=int,
+        default=5,
+        help="k for Hit@k (default 5)",
     )
     parser.add_argument(
-        "--no-llm", action="store_true",
+        "--k-rank",
+        type=int,
+        default=10,
+        help="k for MRR@k / Recall@k (default 10)",
+    )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
         help="retrieval-only mode: skip answer generation (ask(answer=False)). "
-             "No MINIMAX_API_KEY needed — the embedder is local. Used by the "
-             "keyless CI gate (.github/workflows/eval.yml).",
+        "No MINIMAX_API_KEY needed — the embedder is local. Used by the "
+        "keyless CI gate (.github/workflows/eval.yml).",
     )
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
-        "--summary-only", action="store_true",
+        "--summary-only",
+        action="store_true",
         help="omit per-question detail from the output file — use this for "
-             "evals/results/baseline.json, since that file is committed and "
-             "per-question detail would churn the diff every regeneration",
+        "evals/results/baseline.json, since that file is committed and "
+        "per-question detail would churn the diff every regeneration",
     )
     args = parser.parse_args()
 
@@ -111,9 +130,14 @@ def main() -> None:
 
     golden_path = GOLDEN_DIR / f"{args.tier}.jsonl"
     if not golden_path.exists():
-        raise FileNotFoundError(f"no golden file for tier {args.tier!r}: {golden_path}")
+        raise FileNotFoundError(
+            f"no golden file for tier {args.tier!r}: {golden_path}"
+        )
 
-    print(f"Running retrieval eval: tier={args.tier}, k_hit={args.k_hit}, k_rank={args.k_rank}")
+    print(
+        f"Running retrieval eval: tier={args.tier}, "
+        f"k_hit={args.k_hit}, k_rank={args.k_rank}"
+    )
     if args.no_llm:
         print("Mode: retrieval-only (no LLM calls)")
     t0 = time.monotonic()
@@ -127,7 +151,10 @@ def main() -> None:
     print(f"  MRR@{args.k_rank}:    {result['mrr_at_10']:.3f}")
     print(f"  Recall@{args.k_rank}: {result['recall_at_10']:.3f}")
     if result["n_failed"]:
-        print(f"  WARNING: {result['n_failed']} questions failed: {result['failed_q_ids']}")
+        print(
+            f"  WARNING: {result['n_failed']} questions failed: "
+            f"{result['failed_q_ids']}"
+        )
 
     output_path = args.output
     if output_path is None:
@@ -142,7 +169,11 @@ def main() -> None:
     summary["k_hit"] = args.k_hit
     summary["k_rank"] = args.k_rank
 
-    output_data = summary if args.summary_only else {**summary, "per_question": result["per_question"]}
+    output_data = (
+        summary
+        if args.summary_only
+        else {**summary, "per_question": result["per_question"]}
+    )
     output_path.write_text(json.dumps(output_data, indent=2))
     print(f"\nWritten to {output_path}")
 

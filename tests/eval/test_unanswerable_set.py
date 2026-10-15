@@ -1,8 +1,12 @@
-import pytest
 import json
 from pathlib import Path
 
-from safety_rag.eval.schemas import UNANSWERABLE_CATEGORIES, UnanswerableQuestion
+import pytest
+
+from safety_rag.eval.schemas import (
+    UNANSWERABLE_CATEGORIES,
+    UnanswerableQuestion,
+)
 
 GOLDEN_DIR = Path("evals/golden")
 
@@ -10,7 +14,11 @@ GOLDEN_DIR = Path("evals/golden")
 def _load_jsonl(path: Path) -> list[dict]:
     if not path.exists():
         return []
-    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+    return [
+        json.loads(line)
+        for line in path.read_text().splitlines()
+        if line.strip()
+    ]
 
 
 @pytest.fixture
@@ -48,5 +56,7 @@ def test_no_overlap_with_golden_questions(unanswerable_records):
         for r in _load_jsonl(GOLDEN_DIR / tier_file):
             golden_qs.add(r["question"].strip().lower())
 
-    unanswerable_qs = {r["question"].strip().lower() for r in unanswerable_records}
+    unanswerable_qs = {
+        r["question"].strip().lower() for r in unanswerable_records
+    }
     assert not (golden_qs & unanswerable_qs)

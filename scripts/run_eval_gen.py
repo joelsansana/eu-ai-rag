@@ -16,8 +16,10 @@ Usage:
     uv run python scripts/run_eval_gen.py --tier lepanto
     uv run python scripts/run_eval_gen.py --tier demo
     uv run python scripts/run_eval_gen.py --tier unanswerable
-    uv run python scripts/run_eval_gen.py --tier lepanto --output evals/results/gen_lepanto.json
+    uv run python scripts/run_eval_gen.py --tier lepanto \
+        --output evals/results/gen_lepanto.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -46,7 +48,9 @@ def run_generation_eval(golden_path: Path, k: int = 5) -> dict:
     failures: list[str] = []
     unjudged: list[str] = []
 
-    lines = [l for l in golden_path.read_text().splitlines() if l.strip()]
+    lines = [
+        line for line in golden_path.read_text().splitlines() if line.strip()
+    ]
 
     for i, line in enumerate(lines, 1):
         q = json.loads(line)
@@ -72,19 +76,28 @@ def run_generation_eval(golden_path: Path, k: int = 5) -> dict:
             unjudged.append(q_id)
             continue
 
-        per_question.append({
-            "q_id": q_id,
-            "question": q["question"],
-            "difficulty": q.get("difficulty"),
-            "category": q.get("category"),
-            "expect_abstention": expect_abstention,
-            "answer": result["answer"],
-            "verdict": verdict,
-        })
+        per_question.append(
+            {
+                "q_id": q_id,
+                "question": q["question"],
+                "difficulty": q.get("difficulty"),
+                "category": q.get("category"),
+                "expect_abstention": expect_abstention,
+                "answer": result["answer"],
+                "verdict": verdict,
+            }
+        )
 
-        v = verdict["abstention"] if expect_abstention else verdict["faithfulness"]
-        extra = "" if expect_abstention else f" cite={verdict['citation_accuracy']}"
-        print(f"  [{i}/{len(lines)}] {q_id}: {'abstain' if expect_abstention else 'faithful'}={v}{extra}")
+        v = (
+            verdict["abstention"]
+            if expect_abstention
+            else verdict["faithfulness"]
+        )
+        extra = (
+            "" if expect_abstention else f" cite={verdict['citation_accuracy']}"
+        )
+        label = "abstain" if expect_abstention else "faithful"
+        print(f"  [{i}/{len(lines)}] {q_id}: {label}={v}{extra}")
 
     answerable = [r for r in per_question if not r["expect_abstention"]]
     abstention = [r for r in per_question if r["expect_abstention"]]
@@ -104,8 +117,7 @@ def run_generation_eval(golden_path: Path, k: int = 5) -> dict:
         for r in answerable
     ]
     abstention_scores = [
-        1.0 if r["verdict"]["abstention"] == "yes" else 0.0
-        for r in abstention
+        1.0 if r["verdict"]["abstention"] == "yes" else 0.0 for r in abstention
     ]
 
     return {
@@ -130,8 +142,11 @@ def main() -> None:
         "--tier", required=True, choices=["lepanto", "demo", "unanswerable"]
     )
     parser.add_argument(
-        "--k", type=int, default=5,
-        help="sources retrieved per question (default 5, matching the API default)",
+        "--k",
+        type=int,
+        default=5,
+        help="sources retrieved per question (default 5, matching the API "
+        "default)",
     )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
@@ -146,7 +161,9 @@ def main() -> None:
 
     golden_path = GOLDEN_DIR / f"{args.tier}.jsonl"
     if not golden_path.exists():
-        raise FileNotFoundError(f"no golden file for tier {args.tier!r}: {golden_path}")
+        raise FileNotFoundError(
+            f"no golden file for tier {args.tier!r}: {golden_path}"
+        )
 
     print(f"Running generation eval: tier={args.tier}, k={args.k}")
     t0 = time.monotonic()
@@ -156,15 +173,23 @@ def main() -> None:
     print(f"\nResults ({result['n_questions']} judged, {elapsed:.1f}s):")
     if result["n_answerable_judged"]:
         c = result["faithfulness_counts"]
-        print(f"  Faithfulness:      {result['faithfulness_rate']:.3f} "
-              f"(yes={c['yes']} partial={c['partial']} no={c['no']})")
+        print(
+            f"  Faithfulness:      {result['faithfulness_rate']:.3f} "
+            f"(yes={c['yes']} partial={c['partial']} no={c['no']})"
+        )
         print(f"  Citation accuracy: {result['citation_accuracy_rate']:.3f}")
     if result["n_abstention_judged"]:
         print(f"  Abstention rate:   {result['abstention_rate']:.3f}")
     if result["n_failed"]:
-        print(f"  WARNING: {result['n_failed']} questions failed: {result['failed_q_ids']}")
+        print(
+            f"  WARNING: {result['n_failed']} questions failed: "
+            f"{result['failed_q_ids']}"
+        )
     if result["n_unjudged"]:
-        print(f"  WARNING: {result['n_unjudged']} questions unjudged: {result['unjudged_q_ids']}")
+        print(
+            f"  WARNING: {result['n_unjudged']} questions unjudged: "
+            f"{result['unjudged_q_ids']}"
+        )
 
     output_path = args.output
     if output_path is None:
@@ -178,7 +203,9 @@ def main() -> None:
     summary["tier"] = args.tier
     summary["k"] = args.k
     output_path.write_text(
-        json.dumps({**summary, "per_question": result["per_question"]}, indent=2)
+        json.dumps(
+            {**summary, "per_question": result["per_question"]}, indent=2
+        )
     )
     print(f"\nWritten to {output_path}")
 

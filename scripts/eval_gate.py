@@ -9,10 +9,11 @@ create the baseline without failing itself (the bootstrap case).
 Usage:
     uv run python scripts/eval_gate.py \
         --current eval_run_lepanto.json \
-        --baseline-url https://raw.githubusercontent.com/joelsansana/eu-ai-rag/main/evals/results/baseline.json \
+        --baseline-url <raw.githubusercontent.com/.../baseline.json> \
         --metric hit_at_5 \
         --tolerance 0.02
 """
+
 from __future__ import annotations
 
 import argparse
@@ -55,27 +56,42 @@ def load_current(path: Path) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--current", type=Path, required=True,
-                        help="path to the eval run JSON produced this build")
-    parser.add_argument("--baseline-url", required=True,
-                        help="URL of the baseline JSON on main")
-    parser.add_argument("--metric", required=True,
-                        help="metric key to compare, e.g. hit_at_5")
-    parser.add_argument("--tolerance", type=float, default=0.02,
-                        help="allowed drop before the gate fails (default 0.02)")
+    parser.add_argument(
+        "--current",
+        type=Path,
+        required=True,
+        help="path to the eval run JSON produced this build",
+    )
+    parser.add_argument(
+        "--baseline-url", required=True, help="URL of the baseline JSON on main"
+    )
+    parser.add_argument(
+        "--metric", required=True, help="metric key to compare, e.g. hit_at_5"
+    )
+    parser.add_argument(
+        "--tolerance",
+        type=float,
+        default=0.02,
+        help="allowed drop before the gate fails (default 0.02)",
+    )
     args = parser.parse_args()
 
     try:
         baseline = fetch_baseline(args.baseline_url)
     except BaselineNotFoundError as e:
-        print(f"No baseline found on main yet — skipping gate, passing by default. ({e})")
+        print(
+            "No baseline found on main yet — skipping gate, passing by "
+            f"default. ({e})"
+        )
         sys.exit(0)
 
     current = load_current(args.current)
 
     for label, data in (("baseline", baseline), ("current", current)):
         if args.metric not in data:
-            sys.exit(f"GATE ERROR: metric {args.metric!r} missing from {label} JSON")
+            sys.exit(
+                f"GATE ERROR: metric {args.metric!r} missing from {label} JSON"
+            )
 
     baseline_value = baseline[args.metric]
     current_value = current[args.metric]

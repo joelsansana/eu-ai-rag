@@ -27,7 +27,9 @@ def count_term_hits(path: Path, term: str) -> int:
     return count
 
 
-def check_record_pins(record: dict, ai_act_path: Path, nis2_path: Path) -> list[str]:
+def check_record_pins(
+    record: dict, ai_act_path: Path, nis2_path: Path
+) -> list[str]:
     """Returns human-readable problems; empty list means the record's
     pins are consistent with the corpus as it stands right now."""
     problems: list[str] = []
@@ -43,13 +45,25 @@ def check_record_pins(record: dict, ai_act_path: Path, nis2_path: Path) -> list[
             problems.append(f"{q_id}: corpus_snapshot[{key}] is stale")
 
     for term, recorded in record.get("anchor_terms", {}).items():
-        actual = [count_term_hits(ai_act_path, term), count_term_hits(nis2_path, term)]
+        actual = [
+            count_term_hits(ai_act_path, term),
+            count_term_hits(nis2_path, term),
+        ]
         if list(recorded) != actual:
-            problems.append(f"{q_id}: anchor_terms[{term!r}] recorded {recorded}, actual {actual}")
+            problems.append(
+                f"{q_id}: anchor_terms[{term!r}] recorded "
+                f"{recorded}, actual {actual}"
+            )
 
     for term in record.get("must_be_zero", []):
-        actual = [count_term_hits(ai_act_path, term), count_term_hits(nis2_path, term)]
+        actual = [
+            count_term_hits(ai_act_path, term),
+            count_term_hits(nis2_path, term),
+        ]
         if actual != [0, 0]:
-            problems.append(f"{q_id}: must_be_zero term {term!r} now has hits {actual} — question may have become answerable")
+            problems.append(
+                f"{q_id}: must_be_zero term {term!r} now has hits "
+                f"{actual} — question may have become answerable"
+            )
 
     return problems

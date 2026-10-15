@@ -8,6 +8,7 @@ corpus_snapshot hash still matches data/processed/ as it stands today.
 Usage:
     uv run python scripts/verify_unanswerable_pins.py
 """
+
 from __future__ import annotations
 
 import json
@@ -23,7 +24,11 @@ GOLDEN_PATH = Path("evals/golden/unanswerable.jsonl")
 def main() -> int:
     ai_act_path = DATA_DIR / "ai_act.jsonl"
     nis2_path = DATA_DIR / "nis2.jsonl"
-    records = [json.loads(l) for l in GOLDEN_PATH.read_text().splitlines() if l.strip()]
+    records = [
+        json.loads(line)
+        for line in GOLDEN_PATH.read_text().splitlines()
+        if line.strip()
+    ]
 
     problems = []
     for r in records:
@@ -35,7 +40,9 @@ def main() -> int:
             print(f"  - {p}")
         return 1
 
-    print(f"All {len(records)} records verified clean against the current corpus.")
+    print(
+        f"All {len(records)} records verified clean against the current corpus."
+    )
     return 0
 
 

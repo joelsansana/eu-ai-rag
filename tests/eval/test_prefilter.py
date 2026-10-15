@@ -2,7 +2,12 @@ from safety_rag.eval.prefilter import is_junk_candidate, prefilter
 
 
 def make(q: str, **overrides) -> dict:
-    base = {"question": q, "difficulty": "easy", "answerable": True, "content_hash": "h1"}
+    base = {
+        "question": q,
+        "difficulty": "easy",
+        "answerable": True,
+        "content_hash": "h1",
+    }
     base.update(overrides)
     return base
 
@@ -12,15 +17,21 @@ def test_too_short_is_junk():
 
 
 def test_missing_question_mark_is_junk():
-    assert is_junk_candidate(make("What deployers must do under Article 26"), set())
+    assert is_junk_candidate(
+        make("What deployers must do under Article 26"), set()
+    )
 
 
 def test_exact_duplicate_is_junk():
-    assert is_junk_candidate(make("What must deployers do?"), {"what must deployers do?"})
+    assert is_junk_candidate(
+        make("What must deployers do?"), {"what must deployers do?"}
+    )
 
 
 def test_good_question_is_not_junk():
-    assert not is_junk_candidate(make("What must deployers do under Article 26?"), set())
+    assert not is_junk_candidate(
+        make("What must deployers do under Article 26?"), set()
+    )
 
 
 def test_prefilter_drops_junk_and_keeps_good():

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Any
 
 from openai import OpenAI
+
+MODEL = "MiniMax-M3"
 
 
 def get_client() -> OpenAI:
@@ -14,9 +17,9 @@ def get_client() -> OpenAI:
 
 
 def generate(prompt: str, *, temperature: float | None = None) -> str:
-    """Generate a completion from MiniMax-M2.7-highspeed.
+    """Generate a completion from MiniMax-M3.
 
-    MiniMax-M2.7-highspeed always reasons internally — there is no way to disable
+    MiniMax-M3 always reasons internally — there is no way to disable
     thinking for this model family, so no reasoning-mode toggle exists
     here. Thinking arrives inline as <think>...</think> and is stripped
     before returning.
@@ -27,13 +30,15 @@ def generate(prompt: str, *, temperature: float | None = None) -> str:
     """
     client = get_client()
 
-    kwargs: dict[str, float] = {}
+    # Typed as dict[str, Any] rather than dict[str, float]: a float-valued
+    # **kwargs makes the call unfalsifiable, since only temperature is a
+    # float parameter and every other overload parameter must reject it.
+    kwargs: dict[str, Any] = {}
     if temperature is not None:
         kwargs["temperature"] = temperature
 
     response = client.chat.completions.create(
-        #model="MiniMax-M2.7-highspeed",
-        model="MiniMax-M3",
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         **kwargs,
     )

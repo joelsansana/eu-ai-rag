@@ -42,6 +42,17 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# The playground embeds a single-page app as a Python string; its HTML and
+# CSS cannot be wrapped to 80 columns.
+"playground.py" = ["E501"]
+# These two modules hold LLM prompt templates. Their long lines are prose
+# inside string literals, where `# noqa` cannot go and where rewrapping
+# would silently change the prompt sent to the model — which would move
+# the judge/golden-set numbers this repo reports.
+"src/safety_rag/eval/judge.py" = ["E501"]
+"src/safety_rag/eval/golden_generator.py" = ["E501"]
+
 [tool.pyright]
 pythonVersion = "3.12"
 include = ["src", "tests"]

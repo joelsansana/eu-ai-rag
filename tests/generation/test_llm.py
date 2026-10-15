@@ -1,9 +1,15 @@
 import re
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from safety_rag.generation.llm import _strip_thinking, generate, get_client
+from safety_rag.generation.llm import (
+    MODEL,
+    _strip_thinking,
+    generate,
+    get_client,
+)
 
 
 @pytest.mark.integration
@@ -129,7 +135,7 @@ class TestGenerate:
         ):
             generate("hello")
             mock_client.chat.completions.create.assert_called_once_with(
-                model="MiniMax-M2.7-highspeed",
+                model=MODEL,
                 messages=[{"role": "user", "content": "hello"}],
             )
 
@@ -154,7 +160,7 @@ class TestGenerate:
             message = FakeMessage()
 
         class FakeResponse:
-            choices = [FakeChoice()]
+            choices: ClassVar[list[FakeChoice]] = [FakeChoice()]
 
         class FakeCompletions:
             def create(self, **kwargs):
@@ -167,7 +173,10 @@ class TestGenerate:
         class FakeClient:
             chat = FakeChat()
 
-        with patch("safety_rag.generation.llm.get_client", return_value=FakeClient()):
+        with patch(
+            "safety_rag.generation.llm.get_client",
+            return_value=FakeClient(),
+        ):
             generate("hi", temperature=0.2)
 
         assert captured["temperature"] == 0.2
@@ -183,7 +192,7 @@ class TestGenerate:
             message = FakeMessage()
 
         class FakeResponse:
-            choices = [FakeChoice()]
+            choices: ClassVar[list[FakeChoice]] = [FakeChoice()]
 
         class FakeCompletions:
             def create(self, **kwargs):
@@ -196,7 +205,10 @@ class TestGenerate:
         class FakeClient:
             chat = FakeChat()
 
-        with patch("safety_rag.generation.llm.get_client", return_value=FakeClient()):
+        with patch(
+            "safety_rag.generation.llm.get_client",
+            return_value=FakeClient(),
+        ):
             generate("hi")
 
         assert "temperature" not in captured

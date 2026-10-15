@@ -121,7 +121,9 @@ from safety_rag.eval.metrics import hit_at_k, mrr_at_k, recall_at_k
 logger = logging.getLogger(__name__)
 
 
-def run_retrieval_eval(golden_path: Path, k_hit: int = 5, k_rank: int = 10) -> dict:
+def run_retrieval_eval(
+    golden_path: Path, k_hit: int = 5, k_rank: int = 10
+) -> dict:
     hits, mrrs, recalls, failures = [], [], [], []
 
     for line in golden_path.read_text().splitlines():
@@ -141,8 +143,12 @@ def run_retrieval_eval(golden_path: Path, k_hit: int = 5, k_rank: int = 10) -> d
         recalls.append(recall_at_k(ids, set(q["all_acceptable_ids"]), k_rank))
 
     if failures:
-        logger.warning("%d/%d questions failed and were excluded: %s",
-                        len(failures), len(failures) + len(hits), failures)
+        logger.warning(
+            "%d/%d questions failed and were excluded: %s",
+            len(failures),
+            len(failures) + len(hits),
+            failures,
+        )
 
     return {
         "hit_at_5": statistics.mean(hits) if hits else 0.0,

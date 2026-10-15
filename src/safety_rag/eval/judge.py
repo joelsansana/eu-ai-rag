@@ -60,8 +60,14 @@ def judge(
     and mark the question unjudged (same failure-tolerant pattern as
     run_eval.py's n_failed).
     """
-    criteria = _ABSTENTION_CRITERIA if expect_abstention else _ANSWERABLE_CRITERIA
-    shape = _VERDICT_SHAPE_ABSTENTION if expect_abstention else _VERDICT_SHAPE_ANSWERABLE
+    criteria = (
+        _ABSTENTION_CRITERIA if expect_abstention else _ANSWERABLE_CRITERIA
+    )
+    shape = (
+        _VERDICT_SHAPE_ABSTENTION
+        if expect_abstention
+        else _VERDICT_SHAPE_ANSWERABLE
+    )
 
     prompt = f"""You are an evaluator for a regulatory RAG system over the EU regulation.
 
@@ -80,13 +86,18 @@ The "evidence" field is a short quote or justification for your verdicts.
 Respond with ONLY the JSON object, no other text, no markdown fences, in this exact shape:
 {shape}"""
 
-    verdict = _parse_and_validate(generate(prompt, temperature=temperature), expect_abstention)
+    verdict = _parse_and_validate(
+        generate(prompt, temperature=temperature), expect_abstention
+    )
     if verdict is None:
         verdict = _parse_and_validate(
-            generate(prompt + _RETRY_SUFFIX, temperature=temperature), expect_abstention
+            generate(prompt + _RETRY_SUFFIX, temperature=temperature),
+            expect_abstention,
         )
     if verdict is None:
-        raise JudgeError(f"judge produced no valid verdict for question: {question[:80]!r}")
+        raise JudgeError(
+            f"judge produced no valid verdict for question: {question[:80]!r}"
+        )
     return verdict
 
 
@@ -114,7 +125,11 @@ def _parse_and_validate(raw: str, expect_abstention: bool) -> dict | None:
     if not isinstance(data, dict):
         return None
 
-    required = ["abstention"] if expect_abstention else ["faithfulness", "citation_accuracy"]
+    required = (
+        ["abstention"]
+        if expect_abstention
+        else ["faithfulness", "citation_accuracy"]
+    )
     for key in required:
         if data.get(key) not in _ALLOWED[key]:
             return None

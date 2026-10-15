@@ -2,8 +2,8 @@ import pytest
 
 from safety_rag.eval.metrics import hit_at_k, mrr_at_k, recall_at_k
 
-
 # --- hit_at_k ---
+
 
 def test_hit_at_k_gold_present_at_top():
     assert hit_at_k(["a", "b", "c"], "a", k=5) == 1
@@ -34,6 +34,7 @@ def test_hit_at_k_k_zero_never_hits():
 
 
 # --- mrr_at_k ---
+
 
 def test_mrr_at_k_gold_at_first_position():
     assert mrr_at_k(["a", "b", "c"], "a", k=5) == 1.0
@@ -68,6 +69,7 @@ def test_mrr_at_k_duplicate_ids_uses_first_occurrence():
 
 
 # --- recall_at_k ---
+
 
 def test_recall_at_k_all_gold_present():
     assert recall_at_k(["a", "b", "c"], {"a", "b"}, k=5) == 1.0

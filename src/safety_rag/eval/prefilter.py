@@ -14,9 +14,7 @@ def is_junk_candidate(candidate: dict, seen_questions: set[str]) -> bool:
         return True
     if not q.endswith("?"):
         return True
-    if q.lower() in seen_questions:
-        return True
-    return False
+    return q.lower() in seen_questions
 
 
 def prefilter(candidates: list[dict]) -> tuple[list[dict], int]:

@@ -1,9 +1,8 @@
 import json
 from unittest.mock import patch
 
-import pytest
-
 import build_golden
+import pytest
 
 CHUNK_WITH_HASH = {
     "content_hash": "abc123",
@@ -22,8 +21,18 @@ CHUNK_NO_HASH = {
 }
 
 FAKE_CANDIDATES = [
-    {"question": "q1", "difficulty": "easy", "answerable": True, "content_hash": "abc123"},
-    {"question": "q2", "difficulty": "medium", "answerable": True, "content_hash": "abc123"},
+    {
+        "question": "q1",
+        "difficulty": "easy",
+        "answerable": True,
+        "content_hash": "abc123",
+    },
+    {
+        "question": "q2",
+        "difficulty": "medium",
+        "answerable": True,
+        "content_hash": "abc123",
+    },
 ]
 
 
@@ -73,7 +82,9 @@ def test_build_golden_writes_candidates(mock_gen, data_dir, tmp_path):
 
 
 @patch("build_golden.generate_candidates")
-def test_build_golden_skips_chunks_without_content_hash(mock_gen, data_dir, tmp_path):
+def test_build_golden_skips_chunks_without_content_hash(
+    mock_gen, data_dir, tmp_path
+):
     write_jsonl(data_dir / "ai_act.jsonl", [CHUNK_NO_HASH, CHUNK_WITH_HASH])
     mock_gen.return_value = FAKE_CANDIDATES
 
@@ -85,7 +96,9 @@ def test_build_golden_skips_chunks_without_content_hash(mock_gen, data_dir, tmp_
 
 
 @patch("build_golden.generate_candidates")
-def test_build_golden_continues_after_generation_failure(mock_gen, data_dir, tmp_path):
+def test_build_golden_continues_after_generation_failure(
+    mock_gen, data_dir, tmp_path
+):
     from safety_rag.eval.golden_generator import GoldenGenerationError
 
     other_chunk = {**CHUNK_WITH_HASH, "content_hash": "def456"}

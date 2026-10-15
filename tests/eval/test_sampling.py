@@ -2,7 +2,12 @@ from safety_rag.eval.sampling import candidate_key, sample_unreviewed
 
 
 def make(q: str, content_hash: str = "h1") -> dict:
-    return {"question": q, "content_hash": content_hash, "difficulty": "easy", "answerable": True}
+    return {
+        "question": q,
+        "content_hash": content_hash,
+        "difficulty": "easy",
+        "answerable": True,
+    }
 
 
 def test_candidate_key_is_stable_for_same_input():
@@ -18,7 +23,10 @@ def test_candidate_key_differs_for_different_questions():
 
 def test_excludes_already_reviewed():
     candidates = [make(f"q{i}?") for i in range(10)]
-    state = {candidate_key(candidates[0]): "accepted:lepanto", candidate_key(candidates[1]): "rejected"}
+    state = {
+        candidate_key(candidates[0]): "accepted:lepanto",
+        candidate_key(candidates[1]): "rejected",
+    }
 
     sample = sample_unreviewed(candidates, state, n=25, seed=0)
 

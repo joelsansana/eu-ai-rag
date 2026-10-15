@@ -37,7 +37,10 @@ def generate_candidates(chunk: dict, *, temperature: float = 0.2) -> list[dict]:
     and celex so manual vetting can trace it back to a specific corpus
     chunk (see the eval-drift pitfall — this linkage is load-bearing).
     """
-    prompt = GOLDEN_PROMPT.format(header=chunk.get("header") or "", text=chunk["text"])
+    prompt = GOLDEN_PROMPT.format(
+        header=chunk.get("header") or "",
+        text=chunk["text"],
+    )
 
     raw = generate(prompt, temperature=temperature)
     candidates = _parse_json_array(raw)

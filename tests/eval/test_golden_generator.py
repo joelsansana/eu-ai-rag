@@ -15,11 +15,16 @@ CHUNK = {
     "text": "Deployers shall...",
 }
 
-VALID_JSON = """[
-  {"question": "What must deployers do?", "difficulty": "easy", "answerable": true},
-  {"question": "Who assigns human oversight?", "difficulty": "medium", "answerable": true},
-  {"question": "What happens on a serious incident?", "difficulty": "hard", "answerable": true}
-]"""
+VALID_JSON = (
+    "[\n"
+    '  {"question": "What must deployers do?", "difficulty": "easy",'
+    ' "answerable": true},\n'
+    '  {"question": "Who assigns human oversight?", "difficulty": "medium",'
+    ' "answerable": true},\n'
+    '  {"question": "What happens on an incident?", '
+    '"difficulty": "hard", "answerable": true}\n'
+    "]"
+)
 
 
 @patch("safety_rag.eval.golden_generator.generate")

@@ -3,7 +3,6 @@ import sys
 from unittest.mock import patch
 
 import pytest
-
 import run_eval
 
 GOLDEN_RECORD = {
@@ -25,7 +24,8 @@ def write_golden(tmp_path, records):
 @patch("run_eval.ask")
 def test_perfect_hit(mock_ask, tmp_path):
     mock_ask.return_value = {
-        "sources": [{"content_hash": "hash_a"}] + [{"content_hash": f"x{i}"} for i in range(9)]
+        "sources": [{"content_hash": "hash_a"}]
+        + [{"content_hash": f"x{i}"} for i in range(9)]
     }
     path = write_golden(tmp_path, [GOLDEN_RECORD])
 
@@ -33,14 +33,17 @@ def test_perfect_hit(mock_ask, tmp_path):
 
     assert result["hit_at_5"] == 1.0
     assert result["mrr_at_10"] == 1.0
-    assert result["recall_at_10"] == 0.5  # only hash_a of {hash_a, hash_b} retrieved
+    # only hash_a of {hash_a, hash_b} retrieved
+    assert result["recall_at_10"] == 0.5
     assert result["n_questions"] == 1
     assert result["n_failed"] == 0
 
 
 @patch("run_eval.ask")
 def test_miss(mock_ask, tmp_path):
-    mock_ask.return_value = {"sources": [{"content_hash": f"x{i}"} for i in range(10)]}
+    mock_ask.return_value = {
+        "sources": [{"content_hash": f"x{i}"} for i in range(10)]
+    }
     path = write_golden(tmp_path, [GOLDEN_RECORD])
 
     result = run_eval.run_retrieval_eval(path)
@@ -80,7 +83,10 @@ def test_continues_after_one_failure(mock_ask, tmp_path):
     other = {**GOLDEN_RECORD, "q_id": "q002", "question": "second question"}
     path = write_golden(tmp_path, [GOLDEN_RECORD, other])
 
-    mock_ask.side_effect = [RuntimeError("boom"), {"sources": [{"content_hash": "hash_a"}]}]
+    mock_ask.side_effect = [
+        RuntimeError("boom"),
+        {"sources": [{"content_hash": "hash_a"}]},
+    ]
 
     result = run_eval.run_retrieval_eval(path)
 
@@ -90,7 +96,9 @@ def test_continues_after_one_failure(mock_ask, tmp_path):
 
 
 @patch("run_eval.ask")
-def test_empty_golden_file_returns_zeros_without_calling_ask(mock_ask, tmp_path):
+def test_empty_golden_file_returns_zeros_without_calling_ask(
+    mock_ask, tmp_path
+):
     path = tmp_path / "empty.jsonl"
     path.write_text("")
 

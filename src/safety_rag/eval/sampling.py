@@ -4,7 +4,8 @@ import random
 
 
 def candidate_key(candidate: dict) -> str:
-    """Stable identity for a candidate across runs, independent of file order."""
+    """Stable identity for a candidate across runs, independent of
+    file order."""
     return f"{candidate.get('content_hash')}::{candidate.get('question')}"
 
 

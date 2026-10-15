@@ -2,7 +2,8 @@
 """Interactive review loop for golden-set candidates.
 
 Usage:
-    uv run python scripts/vet_golden.py --candidates evals/golden/ai_act.candidates.jsonl
+    uv run python scripts/vet_golden.py \
+        --candidates evals/golden/ai_act.candidates.jsonl
 
 Keys:
     l = accept into lepanto.jsonl
@@ -74,26 +75,48 @@ def next_q_id(tier: str) -> str:
     return f"q{n + 1:03d}"
 
 
-def run(candidates_path: Path, regulation: str, sample_n: int | None = None, seed: int | None = None) -> None:
-    candidates = [json.loads(l) for l in candidates_path.read_text().splitlines() if l.strip()]
+def run(
+    candidates_path: Path,
+    regulation: str,
+    sample_n: int | None = None,
+    seed: int | None = None,
+) -> None:
+    candidates = [
+        json.loads(line)
+        for line in candidates_path.read_text().splitlines()
+        if line.strip()
+    ]
     kept, dropped = prefilter(candidates)
-    print(f"Loaded {len(candidates)} candidates, {dropped} auto-dropped by prefilter, {len(kept)} to review.\n")
+    print(
+        f"Loaded {len(candidates)} candidates, "
+        f"{dropped} auto-dropped by prefilter, {len(kept)} to review.\n"
+    )
 
     chunk_lookup = load_chunk_lookup(regulation)
     state_path = STATE_DIR / f"{candidates_path.stem}.state.json"
     state = load_state(state_path)
 
+    already = sum(1 for c in kept if state.get(candidate_key(c)))
     if sample_n is not None:
         remaining = sample_unreviewed(kept, state, n=sample_n, seed=seed)
-        print(f"Sampling {len(remaining)} unreviewed candidates (of {len(kept) - sum(1 for c in kept if state.get(candidate_key(c)))} unreviewed total).\n")
+        print(
+            f"Sampling {len(remaining)} unreviewed candidates "
+            f"(of {len(kept) - already} unreviewed total).\n"
+        )
     else:
         remaining = [c for c in kept if state.get(candidate_key(c)) is None]
-        print(f"{len(remaining)} not yet decided ({len(kept) - len(remaining)} already reviewed in a prior run).\n")
+        print(
+            f"{len(remaining)} not yet decided "
+            f"({len(kept) - len(remaining)} already reviewed in a prior "
+            f"run).\n"
+        )
 
     for i, candidate in enumerate(remaining, start=1):
         chunk = chunk_lookup.get(candidate.get("content_hash"), {})
         print("=" * 70)
-        print(f"[{i}/{len(remaining)}]  {chunk.get('header', '(header unknown)')}")
+        print(
+            f"[{i}/{len(remaining)}]  {chunk.get('header', '(header unknown)')}"
+        )
         print("-" * 70)
         text = chunk.get("text", "")
         print(text[:600] + ("..." if len(text) > 600 else ""))
@@ -101,13 +124,20 @@ def run(candidates_path: Path, regulation: str, sample_n: int | None = None, see
         print(f"Q ({candidate.get('difficulty')}): {candidate['question']}")
         print("-" * 70)
 
-        choice = input("[l]epanto  [d]emo  [e]dit  [r]eject  [s]kip  [q]uit > ").strip().lower()
+        choice = (
+            input("[l]epanto  [d]emo  [e]dit  [r]eject  [s]kip  [q]uit > ")
+            .strip()
+            .lower()
+        )
 
         key = candidate_key(candidate)
 
         if choice == "q":
             save_state(state_path, state)
-            print("Saved. Resume anytime — already-decided questions won't be shown again.")
+            print(
+                "Saved. Resume anytime — already-decided questions won't be "
+                "shown again."
+            )
             return
 
         if choice == "s":
@@ -141,10 +171,22 @@ def main() -> None:
     parser.add_argument("--candidates", required=True, type=Path)
     parser.add_argument(
         "--regulation",
-        help="defaults to the candidates filename's prefix, e.g. ai_act.candidates.jsonl -> ai_act",
+        help="defaults to the candidates filename's prefix, e.g. "
+        "ai_act.candidates.jsonl -> ai_act",
     )
-    parser.add_argument("--sample", type=int, default=None, help="review a random batch of N unreviewed candidates instead of all of them")
-    parser.add_argument("--seed", type=int, default=None, help="seed for reproducible sampling")
+    parser.add_argument(
+        "--sample",
+        type=int,
+        default=None,
+        help="review a random batch of N unreviewed candidates instead of "
+        "all of them",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="seed for reproducible sampling",
+    )
     args = parser.parse_args()
 
     regulation = args.regulation or args.candidates.stem.split(".")[0]

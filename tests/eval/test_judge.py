@@ -5,12 +5,18 @@ import pytest
 from safety_rag.eval.judge import JudgeError, judge
 
 QUESTION = "What must deployers of high-risk AI systems do for their workers?"
-ANSWER = "Deployers must inform workers' representatives before putting a high-risk system into service at the workplace (Article 26)."
+ANSWER = (
+    "Deployers must inform workers' representatives before putting a "
+    "high-risk system into service at the workplace (Article 26)."
+)
 
 SOURCES = [
     {
         "header": "Article 26, Regulation (EU) 2024/1689 (AI Act)",
-        "text": "Deployers of high-risk AI systems shall inform workers' representatives...",
+        "text": (
+            "Deployers of high-risk AI systems shall inform workers' "
+            "representatives..."
+        ),
     },
     {
         "header": "Recital 133, Regulation (EU) 2024/1689 (AI Act)",
@@ -24,10 +30,13 @@ VALID_ANSWERABLE = """{
   "evidence": "Both claims appear verbatim in source [1]."
 }"""
 
-VALID_ABSTENTION = """{
-  "abstention": "yes",
-  "evidence": "The answer states the corpus does not address national procedure."
-}"""
+VALID_ABSTENTION = (
+    "{\n"
+    '  "abstention": "yes",\n'
+    '  "evidence": "The answer states the corpus does not address '
+    'national procedure."\n'
+    "}"
+)
 
 
 @patch("safety_rag.eval.judge.generate")
@@ -98,7 +107,10 @@ def test_raises_after_second_failure(mock_generate):
 def test_rejects_verdict_value_outside_allowed_set(mock_generate):
     # "maybe" is verdict drift, not a verdict — must fail validation,
     # retry, and raise rather than be accepted.
-    drifted = '{"faithfulness": "maybe", "citation_accuracy": "yes", "evidence": "..."}'
+    drifted = (
+        '{"faithfulness": "maybe", "citation_accuracy": "yes", '
+        '"evidence": "..."}'
+    )
     mock_generate.side_effect = [drifted, drifted]
     with pytest.raises(JudgeError):
         judge(QUESTION, SOURCES, ANSWER)

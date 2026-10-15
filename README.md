@@ -35,6 +35,29 @@ uv run pytest -q
 
 You will need Python 3.12 and [`uv`](https://docs.astral.sh/uv/). Docker is required from Phase 3 onwards; the integration tests (LLM-as-judge against MiniMax) need a `MINIMAX_API_KEY` and are skipped by default.
 
+## Playground
+
+A single-page console for poking at the API by hand. Stdlib only — no extra dependencies, and the repo itself is untouched: the playground proxies `/ask` and `/health` to the running API so the API needs no CORS middleware.
+
+```bash
+# 1. API on :8000 (needs Qdrant; see docker-compose.yml)
+uv run python -m uvicorn safety_rag.api.main:app --port 8000
+
+# 2. Playground on :8877
+uv run python playground.py
+```
+
+Then open <http://localhost:8877>. Ask a question, adjust `k` or the regulation filter, and click a source row to expand the retrieved chunk text.
+
+If the API has `API_TOKEN` set, export the same variable before starting the playground and it will forward the token as a Bearer header; otherwise every ask fails with `401`.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PLAYGROUND_API_HOST` | `localhost` | API host to proxy to |
+| `PLAYGROUND_API_PORT` | `8000` | API port to proxy to |
+| `PLAYGROUND_PORT` | `8877` | Port the playground serves on |
+| `API_TOKEN` / `PLAYGROUND_TOKEN` | unset | Forwarded as `Authorization: Bearer …` when set |
+
 ## Repository layout
 
 ```
@@ -46,6 +69,7 @@ eu-ai-rag/
 ├── LICENSE                # MIT
 ├── CONTRIBUTING.md
 ├── pyproject.toml
+├── playground.py           # Dev console for the API (stdlib only)
 ├── .github/
 │   ├── workflows/ci.yml
 │   └── ISSUE_TEMPLATE/ + PULL_REQUEST_TEMPLATE.md
